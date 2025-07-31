@@ -1,35 +1,108 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
-import './App.css'
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { AuthProvider } from '@/hooks/useAuth';
+import { ProtectedRoute } from '@/components/auth/ProtectedRoute';
+import { Layout } from '@/components/layout/Layout';
+import { LoginForm } from '@/components/auth/LoginForm';
+import { RegisterForm } from '@/components/auth/RegisterForm';
+import { ForgotPasswordForm } from '@/components/auth/ForgotPasswordForm';
+import { AdminDashboard } from '@/components/dashboard/AdminDashboard';
+import { EmployeeDashboard } from '@/components/dashboard/EmployeeDashboard';
+import { useAuth } from '@/hooks/useAuth';
+
+const DashboardRouter = () => {
+  const { user } = useAuth();
+  
+  if (!user) return null;
+  
+  return user.role === 'admin' ? <AdminDashboard /> : <EmployeeDashboard />;
+};
 
 function App() {
-  const [count, setCount] = useState(0)
-
   return (
-    <>
-      <div>
-        <a href="https://vite.dev" target="_blank">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
-      </div>
-      <h1>Vite + React</h1>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
-        <p>
-          Edit <code>src/App.tsx</code> and save to test HMR
-        </p>
-      </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
-    </>
-  )
+    <AuthProvider>
+      <Router>
+        <Routes>
+          {/* Auth Routes */}
+          <Route path="/login" element={<LoginForm />} />
+          <Route path="/register" element={<RegisterForm />} />
+          <Route path="/forgot-password" element={<ForgotPasswordForm />} />
+          
+          {/* Protected Routes */}
+          <Route
+            path="/dashboard"
+            element={
+              <ProtectedRoute>
+                <Layout>
+                  <DashboardRouter />
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
+          
+          {/* Admin Only Routes */}
+          <Route
+            path="/employees"
+            element={
+              <ProtectedRoute requiredRole="admin">
+                <Layout>
+                  <div className="text-white">Employee Management (Coming Soon)</div>
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
+          
+          <Route
+            path="/reports"
+            element={
+              <ProtectedRoute requiredRole="admin">
+                <Layout>
+                  <div className="text-white">Reports (Coming Soon)</div>
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
+          
+          {/* Employee Routes */}
+          <Route
+            path="/time-tracker"
+            element={
+              <ProtectedRoute requiredRole="employee">
+                <Layout>
+                  <DashboardRouter />
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
+          
+          <Route
+            path="/history"
+            element={
+              <ProtectedRoute requiredRole="employee">
+                <Layout>
+                  <div className="text-white">Time History (Coming Soon)</div>
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
+          
+          {/* Settings Route */}
+          <Route
+            path="/settings"
+            element={
+              <ProtectedRoute>
+                <Layout>
+                  <div className="text-white">Settings (Coming Soon)</div>
+                </Layout>
+              </ProtectedRoute>
+            }
+          />
+          
+          {/* Default redirect */}
+          <Route path="/" element={<Navigate to="/dashboard" replace />} />
+        </Routes>
+      </Router>
+    </AuthProvider>
+  );
 }
 
-export default App
+export default App;
