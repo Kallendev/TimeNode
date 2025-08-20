@@ -1,19 +1,31 @@
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
+import Logo from "@/assets/TimeNode logo.png";
 
 export default function LandingPage() {
   const navigate = useNavigate();
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-white text-black px-6">
-      {/* Logo / Brand */}
-      <h1 className="text-4xl md:text-5xl font-bold tracking-tight mb-4">
+    <div className="relative min-h-screen flex flex-col items-center justify-center bg-white text-black px-6">
+      {/* Logo at Top Left */}
+     <div className="absolute top-6 left-6 flex items-center space-x-2">
+        <img
+          src={Logo}
+          alt="TimeNode Logo"
+          className="h-12 sm:h-16 md:h-20 lg:h-29 w-auto"
+        />
+      </div>
+
+
+      {/* Welcome Title */}
+      <h1 className="text-4xl md:text-5xl font-bold tracking-tight mb-4 text-center">
         Welcome to <span className="text-[hsl(192,82.3%,31%)]">TimeNode</span>
       </h1>
 
       {/* Subtext */}
       <p className="text-lg md:text-xl text-gray-600 max-w-lg text-center mb-8">
-        Your ultimate time tracking and productivity tool — simple, powerful, and made for you.
+        Your ultimate time tracking and productivity tool — simple, powerful,
+        and made for you.
       </p>
 
       {/* Buttons */}
