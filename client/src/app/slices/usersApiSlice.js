@@ -1,5 +1,6 @@
 import { USERS_URL } from "../../constants/constants.js";
 import { apiSlice } from "./apiSlice.js";
+const PASSWORD_URL = "/api/password-reset";
 
 export const usersApiSlice = apiSlice.injectEndpoints({
   endpoints: (builder) => ({
@@ -90,6 +91,22 @@ export const usersApiSlice = apiSlice.injectEndpoints({
         { type: 'User', id: 'LIST' },
       ],
     }),
+      requestPasswordReset: builder.mutation({
+      query: (email) => ({
+        url: `${PASSWORD_URL}/request-reset`,
+        method: "POST",
+        body: { email },
+      }),
+    }),
+
+    // ✅ Reset password (submit OTP + new password)
+    resetPassword: builder.mutation({
+      query: ({ email, otp, newPassword }) => ({
+        url: `${PASSWORD_URL}/reset-password`,
+        method: "POST",
+        body: { email, otp, newPassword },
+      }),
+    }),
   }),
 });
 
@@ -105,4 +122,8 @@ export const {
   useGetAllUsersQuery,
   usePromoteToAdminMutation,
   useDemoteToEmployeeMutation,
+  
+  //password reset hooks
+   useRequestPasswordResetMutation,
+   useResetPasswordMutation,
 } = usersApiSlice;

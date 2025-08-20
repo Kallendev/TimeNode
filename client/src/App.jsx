@@ -5,6 +5,9 @@ import RegisterPage from "./pages/Register";
 import AdminDashboard from "./pages/AdminDashboard";
 import EmployeeDashboard from "./pages/EmployeeDashboard";
 import LandingPage from "@/pages/LandingPage";
+import ForgotPasswordPage from "./pages/ForgotPassword";
+
+
 
 function App() {
   return (
@@ -18,6 +21,12 @@ function App() {
         {/* Dashboards */}
         <Route path="/admin" element={<AdminDashboard />} />
         <Route path="/employee" element={<EmployeeDashboard />} />
+        {/* Password reset routes */}
+        <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+       
+        
+        {/* Catch-all route */}
+        <Route path="*" element={<LandingPage />} />
       </Routes>
     </Router>
   );

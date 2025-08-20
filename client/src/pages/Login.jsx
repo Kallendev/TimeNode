@@ -116,13 +116,21 @@ const LoginPage = () => {
 
             {/* Forgot Password + Register */}
             <div className="flex justify-between text-sm text-gray-600">
-              <button type="button" onClick={() => alert("Forgot password flow")}>
-                Forgot password?
-              </button>
-              <button type="button" onClick={() => navigate("/register")}>
-                Register
-              </button>
-            </div>
+                <button
+                  type="button"
+                  onClick={() => navigate("/forgot-password")}
+                  className="hover:underline"
+                >
+                  Forgot password?
+                </button>
+                <button
+                  type="button"
+                  onClick={() => navigate("/register")}
+                  className="hover:underline"
+                >
+                  Register
+                </button>
+              </div>
           </form>
         </CardContent>
       </Card>
