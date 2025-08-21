@@ -3,10 +3,8 @@
 
 // Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
 // Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-
 generator client {
   provider = "prisma-client-js"
-
 }
 
 datasource db {
@@ -20,12 +18,14 @@ enum Role {
 }
 
 model User {
-  id        String   @id @default(uuid())
+  id        String        @id @default(uuid())
   name      String
-  email     String   @unique
+  email     String        @unique
   password  String
-  role      Role     
-  createdAt DateTime @default(now())
+  role      Role
+  createdAt DateTime      @default(now())
+  // relation back to attendance
+  attendances Attendance[]
 }
 
 model PasswordReset {
@@ -35,4 +35,18 @@ model PasswordReset {
   expiresAt DateTime
   used      Boolean  @default(false)
   createdAt DateTime @default(now())
+}
+
+model Attendance {
+  id        Int      @id @default(autoincrement())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId    String   // matches User.id (uuid is a String!)
+
+  day       DateTime
+  checkIn   DateTime?
+  checkOut  DateTime?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, day])
 }

@@ -1,57 +1,51 @@
 import { USERS_URL } from "../../constants/constants.js";
 import { apiSlice } from "./apiSlice.js";
+
 const PASSWORD_URL = "/api/password-reset";
+const ATTENDANCE_URL = "/api/attendance";
 
 export const usersApiSlice = apiSlice.injectEndpoints({
   endpoints: (builder) => ({
-    // Authentication endpoints
-    
-    // Register
+    // =========================
+    // 🔐 Authentication
+    // =========================
     register: builder.mutation({
-      query: (userData) => {
-        console.log('RTK Query - Register mutation called with:', userData);
-        console.log('RTK Query - Making request to:', `${USERS_URL}/register`);
-        console.log('RTK Query - Full URL will be:', `${USERS_URL}/register`);
-        return {
-          url: `${USERS_URL}/register`,
-          method: "POST",
-          body: userData, // { name, email, password, confirmPassword, role? }
-        };
-      },
-      invalidatesTags: ['User'],
+      query: (userData) => ({
+        url: `${USERS_URL}/register`,
+        method: "POST",
+        body: userData,
+      }),
+      invalidatesTags: ["User"],
     }),
 
-    // Login
     login: builder.mutation({
       query: (credentials) => ({
         url: `${USERS_URL}/login`,
         method: "POST",
-        body: credentials, // { email, password }
+        body: credentials,
       }),
-      invalidatesTags: ['User'],
+      invalidatesTags: ["User"],
     }),
 
-    // Logout
     logout: builder.mutation({
       query: () => ({
         url: `${USERS_URL}/logout`,
         method: "POST",
       }),
-      invalidatesTags: ['User'],
+      invalidatesTags: ["User"],
     }),
 
-    // Get current user (me)
     getMe: builder.query({
       query: () => ({
         url: `${USERS_URL}/me`,
         method: "GET",
       }),
-      providesTags: ['User'],
+      providesTags: ["User"],
     }),
 
-    // User management endpoints (Admin only)
-    
-    // Get all users
+    // =========================
+    // 👥 User Management (Admin only)
+    // =========================
     getAllUsers: builder.query({
       query: () => ({
         url: `${USERS_URL}`,
@@ -60,38 +54,34 @@ export const usersApiSlice = apiSlice.injectEndpoints({
       providesTags: (result) =>
         result?.data
           ? [
-              ...result.data.map(({ id }) => ({ type: 'User', id })),
-              { type: 'User', id: 'LIST' },
+              ...result.data.map(({ id }) => ({ type: "User", id })),
+              { type: "User", id: "LIST" },
             ]
-          : [{ type: 'User', id: 'LIST' }],
+          : [{ type: "User", id: "LIST" }],
     }),
 
-    // Promote user to admin
     promoteToAdmin: builder.mutation({
       query: (userId) => ({
         url: `${USERS_URL}/promote`,
-        method: "PUT", // or PATCH if you prefer
+        method: "PUT",
         body: { userId },
       }),
-      invalidatesTags: (result, error, userId) => [
-        { type: 'User', id: userId },
-        { type: 'User', id: 'LIST' },
-      ],
+      invalidatesTags: ["User"],
     }),
 
-    // Demote admin to employee
     demoteToEmployee: builder.mutation({
       query: (userId) => ({
         url: `${USERS_URL}/demote`,
-        method: "PUT", // or PATCH if you prefer
+        method: "PUT",
         body: { userId },
       }),
-      invalidatesTags: (result, error, userId) => [
-        { type: 'User', id: userId },
-        { type: 'User', id: 'LIST' },
-      ],
+      invalidatesTags: ["User"],
     }),
-      requestPasswordReset: builder.mutation({
+
+    // =========================
+    // 🔑 Password Reset
+    // =========================
+    requestPasswordReset: builder.mutation({
       query: (email) => ({
         url: `${PASSWORD_URL}/request-reset`,
         method: "POST",
@@ -99,7 +89,6 @@ export const usersApiSlice = apiSlice.injectEndpoints({
       }),
     }),
 
-    // ✅ Reset password (submit OTP + new password)
     resetPassword: builder.mutation({
       query: ({ email, otp, newPassword }) => ({
         url: `${PASSWORD_URL}/reset-password`,
@@ -107,23 +96,66 @@ export const usersApiSlice = apiSlice.injectEndpoints({
         body: { email, otp, newPassword },
       }),
     }),
+
+    // =========================
+    // 🕒 Attendance
+    // =========================
+    getMyToday: builder.query({
+      query: () => ({
+        url: `${ATTENDANCE_URL}/today`,
+        method: "GET",
+      }),
+      providesTags: ["Attendance"],
+    }),
+
+    getMyHistory: builder.query({
+      query: () => ({
+        url: `${ATTENDANCE_URL}/history`,
+        method: "GET",
+      }),
+      providesTags: ["Attendance"],
+    }),
+
+    checkIn: builder.mutation({
+      query: () => ({
+        url: `${ATTENDANCE_URL}/checkin`,
+        method: "POST",
+      }),
+      invalidatesTags: ["Attendance"],
+    }),
+
+    checkOut: builder.mutation({
+      query: () => ({
+        url: `${ATTENDANCE_URL}/checkout`,
+        method: "POST",
+      }),
+      invalidatesTags: ["Attendance"],
+    }),
   }),
 });
 
-// Export hooks for usage in functional components
+// =========================
+// ✅ Export hooks
+// =========================
 export const {
-  // Authentication hooks
+  // Auth
   useRegisterMutation,
   useLoginMutation,
   useLogoutMutation,
   useGetMeQuery,
-  
-  // User management hooks
+
+  // User management
   useGetAllUsersQuery,
   usePromoteToAdminMutation,
   useDemoteToEmployeeMutation,
-  
-  //password reset hooks
-   useRequestPasswordResetMutation,
-   useResetPasswordMutation,
+
+  // Password reset
+  useRequestPasswordResetMutation,
+  useResetPasswordMutation,
+
+  // Attendance
+  useGetMyTodayQuery,
+  useGetMyHistoryQuery,
+  useCheckInMutation,
+  useCheckOutMutation,
 } = usersApiSlice;

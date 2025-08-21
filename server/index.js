@@ -5,6 +5,8 @@ import dotenv from 'dotenv';
 import { PrismaClient } from '@prisma/client';
 import AuthRoutes from './routes/AuthRoutes.js';
 import Password from './routes/PasswordResetRoute.js';
+import AttendanceRoutes from './routes/AttendanceRoutes.js';
+
 //import listEndpoints from 'express-list-endpoints';
 
 dotenv.config();
@@ -34,8 +36,12 @@ app.use('/api/auth', AuthRoutes);
 
 //Password Reset Routes
 app.use('/api/password-reset', Password);
+//Attendance Routes
 
-// console.log(listEndpoints(app));
+app.use('/api/attendance', AttendanceRoutes);
+
+
+
 
 app.listen(PORT, () => {
   console.log(`Server listening on PORT:${PORT}`);
