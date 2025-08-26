@@ -1,17 +1,19 @@
 // src/pages/EmployeeDashboard.jsx
 import { useEffect, useMemo, useState } from "react";
+import { useSelector, useDispatch } from "react-redux";
+import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Loader2, LogIn, LogOut, Clock3, CalendarDays, History } from "lucide-react";
 
-// ⬇️ replace these with your actual RTK Query attendance hooks
-// e.g., from "@/app/slices/attendanceApiSlice"
 import {
   useGetMyTodayQuery,
   useGetMyHistoryQuery,
   useCheckInMutation,
   useCheckOutMutation,
+  useLogoutMutation,
 } from "@/app/slices/usersApiSlice";
+import { logout as logoutAction } from "@/app/slices/authSlice";
 
 const accentColor = "hsl(192.9 82.3% 31%)";
 
@@ -36,6 +38,15 @@ function msToHMM(ms) {
 }
 
 export default function EmployeeDashboard() {
+  const dispatch = useDispatch();
+  const navigate = useNavigate();
+
+  // 👤 get logged-in user from Redux
+  const { userInfo } = useSelector((state) => state.auth);
+
+  // API logout mutation
+  const [apiLogout] = useLogoutMutation();
+
   // today + history
   const {
     data: today,
@@ -51,7 +62,7 @@ export default function EmployeeDashboard() {
     isFetching: fetchingHistory,
     refetch: refetchHistory,
     error: historyError,
-  } = useGetMyHistoryQuery({ limit: 10 }); // adjust as needed
+  } = useGetMyHistoryQuery({ limit: 10 });
 
   // mutations
   const [checkIn, { isLoading: checkingIn }] = useCheckInMutation();
@@ -94,6 +105,16 @@ export default function EmployeeDashboard() {
     }
   };
 
+  const handleLogout = async () => {
+    try {
+      await apiLogout().unwrap(); // call API logout
+    } catch (err) {
+      console.warn("Logout API failed, clearing locally anyway");
+    }
+    dispatch(logoutAction()); // clear redux + localStorage
+    navigate("/"); // back to landing page
+  };
+
   return (
     <div className="min-h-screen bg-white text-black p-6 md:p-10">
       <div className="max-w-6xl mx-auto space-y-8">
@@ -101,25 +122,38 @@ export default function EmployeeDashboard() {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-2xl md:text-3xl font-bold tracking-tight">
-              Employee Dashboard
+              {userInfo
+                ? `Welcome, ${userInfo.user?.name || userInfo.user?.email}`
+                : "Employee Dashboard"}
             </h1>
             <p className="text-gray-600">
               Track your attendance and working hours with TimeNode.
             </p>
           </div>
-          <div
-            className="px-3 py-1 rounded-full text-sm font-medium"
-            style={{
-              background: "rgba(0,0,0,0.04)",
-              border: `1px solid ${accentColor}`,
-              color: accentColor,
-            }}
-          >
-            {fetchingToday || fetchingHistory ? "Syncing…" : "Up to date"}
+          <div className="flex items-center gap-4">
+            <div
+              className="px-3 py-1 rounded-full text-sm font-medium"
+              style={{
+                background: "rgba(0,0,0,0.04)",
+                border: `1px solid ${accentColor}`,
+                color: accentColor,
+              }}
+            >
+              {fetchingToday || fetchingHistory ? "Syncing…" : "Up to date"}
+            </div>
+            {/* 🚪 Logout Button */}
+            <Button
+              onClick={handleLogout}
+              variant="outline"
+              className="rounded-xl"
+              style={{ borderColor: "red", color: "red" }}
+            >
+              <LogOut size={16} className="mr-2" /> Logout
+            </Button>
           </div>
         </div>
 
-        {/* Today Status + Actions */}
+        {/* ================== Today Status + Actions ================== */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <Card className="lg:col-span-2 shadow-md border border-gray-200">
             <CardHeader className="flex flex-row items-center justify-between">
@@ -130,11 +164,7 @@ export default function EmployeeDashboard() {
               <span
                 className="text-sm px-2 py-1 rounded-full"
                 style={{
-                  backgroundColor: checkedOut
-                    ? "rgba(0,0,0,0.06)"
-                    : checkedIn
-                    ? "rgba(0,0,0,0.06)"
-                    : "rgba(0,0,0,0.06)",
+                  backgroundColor: "rgba(0,0,0,0.06)",
                   border: `1px solid ${accentColor}`,
                   color: accentColor,
                 }}
@@ -156,7 +186,7 @@ export default function EmployeeDashboard() {
                     <div className="rounded-xl border border-gray-200 p-4">
                       <p className="text-xs text-gray-500">Date</p>
                       <p className="text-lg font-semibold">
-                        {formatDate(today?.date || Date.now())}
+                        {formatDate(today?.day || Date.now())}
                       </p>
                     </div>
                     <div className="rounded-xl border border-gray-200 p-4">
@@ -239,9 +269,8 @@ export default function EmployeeDashboard() {
                 <p className="text-red-600">Failed to load weekly summary.</p>
               ) : (
                 <>
-                  {/* You can compute these on backend; here we do a quick client calc */}
                   {(() => {
-                    const last7 = (history?.records || []).slice(0, 7);
+                    const last7 = (history?.data || []).slice(0, 7);
                     const totalMs = last7.reduce((sum, r) => {
                       const start = r?.checkIn ? new Date(r.checkIn).getTime() : 0;
                       const end = r?.checkOut ? new Date(r.checkOut).getTime() : 0;
@@ -270,7 +299,7 @@ export default function EmployeeDashboard() {
           </Card>
         </div>
 
-        {/* History */}
+        {/* ================== History ================== */}
         <Card className="shadow-md border border-gray-200">
           <CardHeader className="flex flex-row items-center justify-between">
             <div className="flex items-center gap-2">
@@ -297,7 +326,7 @@ export default function EmployeeDashboard() {
               </div>
             ) : historyError ? (
               <p className="text-red-600">Failed to load attendance history.</p>
-            ) : (history?.records || []).length === 0 ? (
+            ) : (history?.data || []).length === 0 ? (
               <p className="text-gray-600">No attendance records yet.</p>
             ) : (
               <div className="overflow-x-auto">
@@ -312,7 +341,7 @@ export default function EmployeeDashboard() {
                     </tr>
                   </thead>
                   <tbody>
-                    {(history?.records || []).map((r) => {
+                    {(history?.data || []).map((r) => {
                       const total =
                         r?.checkIn && r?.checkOut
                           ? msToHMM(new Date(r.checkOut) - new Date(r.checkIn))
@@ -323,8 +352,8 @@ export default function EmployeeDashboard() {
                           : "Open"
                         : "Absent";
                       return (
-                        <tr key={r.id} className="border-b border-gray-100 text-sm">
-                          <td className="py-3 pr-4">{formatDate(r.date)}</td>
+                        <tr key={r.id || r.day} className="border-b border-gray-100 text-sm">
+                          <td className="py-3 pr-4">{formatDate(r.day)}</td>
                           <td className="py-3 pr-4">{formatTime(r.checkIn)}</td>
                           <td className="py-3 pr-4">{formatTime(r.checkOut)}</td>
                           <td className="py-3 pr-4">{total}</td>

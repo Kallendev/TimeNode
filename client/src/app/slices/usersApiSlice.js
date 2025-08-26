@@ -131,6 +131,23 @@ export const usersApiSlice = apiSlice.injectEndpoints({
       }),
       invalidatesTags: ["Attendance"],
     }),
+    // --- ADMIN ENDPOINTS ---
+      getAllRecords: builder.query({
+        query: () => ({
+          url: `${ATTENDANCE_URL}/admin/records`,
+          method: "GET",
+        }),
+        providesTags: ["Records"],
+      }),
+
+      getWeeklyReport: builder.query({
+        query: () => ({
+          url: `${ATTENDANCE_URL}/admin/report/weekly`,
+          method: "GET",
+          responseHandler: (response) => response.text(), // CSV download
+        }),
+      }),
+
   }),
 });
 
@@ -158,4 +175,8 @@ export const {
   useGetMyHistoryQuery,
   useCheckInMutation,
   useCheckOutMutation,
+  // Admin
+  useGetAllRecordsQuery,
+  useGetWeeklyReportQuery,
+  
 } = usersApiSlice;

@@ -16,7 +16,7 @@ const prisma = new PrismaClient();
 
 // CORS configuration to allow cookies
 app.use(cors({
-  origin: 'http://localhost:5173', // Your frontend URL
+  origin: 'http://localhost:5174', // Your frontend URL
   credentials: true, // Allow cookies to be sent
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization']
