@@ -178,5 +178,6 @@ export const {
   // Admin
   useGetAllRecordsQuery,
   useGetWeeklyReportQuery,
+  useLazyGetWeeklyReportQuery,
   
 } = usersApiSlice;

@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom";
 import {
   useGetAllRecordsQuery,
   useGetWeeklyReportQuery,
+  useLazyGetWeeklyReportQuery,
 } from "@/app/slices/usersApiSlice";
 import { logout as logoutAction } from "@/app/slices/authSlice";
 import {
@@ -33,11 +34,13 @@ const AdminDashboard = () => {
     dispatch(logoutAction());
     navigate("/");
   };
+const [triggerWeekly] = useLazyGetWeeklyReportQuery();
 
-  const handleDownloadReport = async () => {
-    const res = await fetchWeekly();
-    if (res.data) {
-      const blob = new Blob([res.data], { type: "text/csv" });
+const handleDownloadReport = async () => {
+  try {
+    const res = await triggerWeekly().unwrap(); // unwrap gives plain data
+    if (res) {
+      const blob = new Blob([res], { type: "text/csv" });
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
@@ -45,6 +48,17 @@ const AdminDashboard = () => {
       a.click();
       window.URL.revokeObjectURL(url);
     }
+  } catch (err) {
+    console.error("Error downloading report:", err);
+  }
+};
+
+  const isLate = (checkIn) => {
+    if (!checkIn) return false;
+    const date = new Date(checkIn);
+    const lateThreshold = new Date(date);
+    lateThreshold.setHours(8, 0, 0, 0); // 8:00 AM
+    return date > lateThreshold;
   };
 
   return (
@@ -103,9 +117,18 @@ const AdminDashboard = () => {
                       {new Date(r.day).toLocaleDateString()}
                     </td>
                     <td className="p-2 border">
-                      {r.checkIn
-                        ? new Date(r.checkIn).toLocaleTimeString()
-                        : "—"}
+                      {r.checkIn ? (
+                        <>
+                          {new Date(r.checkIn).toLocaleTimeString()}
+                          {isLate(r.checkIn) && (
+                            <span className="ml-2 text-red-600 font-bold">
+                              (Late)
+                            </span>
+                          )}
+                        </>
+                      ) : (
+                        "—"
+                      )}
                     </td>
                     <td className="p-2 border">
                       {r.checkOut
