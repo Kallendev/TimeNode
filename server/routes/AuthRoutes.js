@@ -1,5 +1,5 @@
 import express from 'express';
-import { register, login, logout,getMe } from '../controller/AuthController.js';
+import { register, login, logout,getMe, listUsers } from '../controller/AuthController.js';
 import {requireAuth, requireAdmin} from '../middleware/AuthMiddleware.js';
 
 const router = express.Router();
@@ -15,5 +15,8 @@ router.post('/login', login);
 
 // POST /api/auth/logout - Protected route
 router.post('/logout', requireAuth, requireAdmin, logout);
+
+// GET /api/auth - Admin list users
+router.get('/', requireAuth, requireAdmin, listUsers);
 
 export default router;

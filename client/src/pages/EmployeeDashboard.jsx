@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useSelector, useDispatch } from "react-redux";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Loader2, LogIn, LogOut, Clock3, CalendarDays, History } from "lucide-react";
 
@@ -12,6 +13,10 @@ import {
   useCheckInMutation,
   useCheckOutMutation,
   useLogoutMutation,
+  useGetMyTasksQuery,
+  useUpdateMyTaskStatusMutation,
+  useGetMyProjectsQuery,
+  useCreateTaskMutation,
 } from "@/app/slices/usersApiSlice";
 import { logout as logoutAction } from "@/app/slices/authSlice";
 
@@ -43,6 +48,7 @@ export default function EmployeeDashboard() {
 
   // 👤 get logged-in user from Redux
   const { userInfo } = useSelector((state) => state.auth);
+  const userId = userInfo?.user?.id;
 
   // API logout mutation
   const [apiLogout] = useLogoutMutation();
@@ -54,7 +60,7 @@ export default function EmployeeDashboard() {
     isFetching: fetchingToday,
     refetch: refetchToday,
     error: todayError,
-  } = useGetMyTodayQuery();
+  } = useGetMyTodayQuery(undefined, { refetchOnMountOrArgChange: true });
 
   const {
     data: history,
@@ -62,11 +68,17 @@ export default function EmployeeDashboard() {
     isFetching: fetchingHistory,
     refetch: refetchHistory,
     error: historyError,
-  } = useGetMyHistoryQuery({ limit: 10 });
+  } = useGetMyHistoryQuery({ limit: 10 }, { refetchOnMountOrArgChange: true });
 
   // mutations
   const [checkIn, { isLoading: checkingIn }] = useCheckInMutation();
   const [checkOut, { isLoading: checkingOut }] = useCheckOutMutation();
+  const { data: myTasks, isLoading: loadingTasks, refetch: refetchTasks } = useGetMyTasksQuery(userId, { skip: !userId, refetchOnMountOrArgChange: true });
+  const { data: myProjects, isLoading: loadingProjects, refetch: refetchProjects } = useGetMyProjectsQuery(userId, { skip: !userId, refetchOnMountOrArgChange: true });
+  const [updateTaskStatus, { isLoading: updatingTask }] = useUpdateMyTaskStatusMutation();
+  const [createTask, { isLoading: creatingTask }] = useCreateTaskMutation();
+  const [newTask, setNewTask] = useState({ title: "", description: "", dueDate: "", projectId: "" });
+  const [activeTab, setActiveTab] = useState("overview");
 
   // live elapsed time after check-in
   const [now, setNow] = useState(Date.now());
@@ -115,6 +127,34 @@ export default function EmployeeDashboard() {
     navigate("/"); // back to landing page
   };
 
+  const handleUpdateTask = async (taskId, status) => {
+    try {
+      await updateTaskStatus({ taskId, status }).unwrap();
+      await refetchTasks();
+    } catch (err) {
+      alert(err?.data?.message || "Failed to update task");
+    }
+  };
+
+  const handleCreateTask = async (e) => {
+    e.preventDefault();
+    if (!newTask.title) return alert("Title is required");
+    try {
+      await createTask({
+        title: newTask.title,
+        description: newTask.description || undefined,
+        dueDate: newTask.dueDate || undefined,
+        userId,
+        projectId: newTask.projectId || undefined,
+        source: 'EMPLOYEE',
+      }).unwrap();
+      setNewTask({ title: "", description: "", dueDate: "", projectId: "" });
+      await refetchTasks();
+    } catch (err) {
+      alert(err?.data?.message || "Failed to create task");
+    }
+  };
+
   return (
     <div className="min-h-screen bg-white text-black p-6 md:p-10">
       <div className="max-w-6xl mx-auto space-y-8">
@@ -153,7 +193,30 @@ export default function EmployeeDashboard() {
           </div>
         </div>
 
-        {/* ================== Today Status + Actions ================== */}
+        {/* Tabs */}
+        <div className="flex flex-wrap gap-2 mt-4">
+          {[
+            { key: "overview", label: "Overview" },
+            { key: "tasks", label: "Tasks" },
+            { key: "projects", label: "Projects" },
+            { key: "history", label: "History" },
+          ].map((t) => (
+            <button
+              key={t.key}
+              onClick={() => setActiveTab(t.key)}
+              className={`px-3 py-1.5 rounded-md text-sm border ${
+                activeTab === t.key
+                  ? "bg-[rgba(0,0,0,0.04)]"
+                  : "bg-white hover:bg-[rgba(0,0,0,0.03)]"
+              }`}
+              style={{ borderColor: accentColor, color: activeTab === t.key ? accentColor : "inherit" }}
+            >
+              {t.label}
+            </button>
+          ))}
+        </div>
+
+        {activeTab === "overview" && (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <Card className="lg:col-span-2 shadow-md border border-gray-200">
             <CardHeader className="flex flex-row items-center justify-between">
@@ -298,8 +361,184 @@ export default function EmployeeDashboard() {
             </CardContent>
           </Card>
         </div>
+        )}
 
-        {/* ================== History ================== */}
+        {activeTab === "tasks" && (
+        <Card className="shadow-md border border-gray-200">
+          <CardHeader className="flex flex-row items-center justify-between">
+            <div className="flex items-center gap-2">
+              <History size={20} style={{ color: accentColor }} />
+              <CardTitle>My Tasks</CardTitle>
+            </div>
+            <Button
+              variant="outline"
+              onClick={() => refetchTasks()}
+              className="rounded-xl"
+              style={{ borderColor: accentColor, color: accentColor }}
+            >
+              Refresh
+            </Button>
+          </CardHeader>
+          <CardContent>
+            {/* Create Task Form */}
+            <form onSubmit={handleCreateTask} className="grid grid-cols-1 md:grid-cols-5 gap-2 mb-4">
+              <input
+                type="text"
+                placeholder="Task title"
+                className="border rounded-md px-2 py-2 md:col-span-2"
+                value={newTask.title}
+                onChange={(e) => setNewTask((s) => ({ ...s, title: e.target.value }))}
+              />
+              <input
+                type="text"
+                placeholder="Description (optional)"
+                className="border rounded-md px-2 py-2 md:col-span-2"
+                value={newTask.description}
+                onChange={(e) => setNewTask((s) => ({ ...s, description: e.target.value }))}
+              />
+              <input
+                type="date"
+                className="border rounded-md px-2 py-2"
+                value={newTask.dueDate}
+                onChange={(e) => setNewTask((s) => ({ ...s, dueDate: e.target.value }))}
+              />
+              <select
+                className="border rounded-md px-2 py-2"
+                value={newTask.projectId}
+                onChange={(e) => setNewTask((s) => ({ ...s, projectId: e.target.value }))}
+              >
+                <option value="">No project</option>
+                {(myProjects || []).map((p) => (
+                  <option key={p.id} value={p.id}>{p.name}</option>
+                ))}
+              </select>
+              <Button type="submit" disabled={creatingTask} className="rounded-xl" style={{ backgroundColor: accentColor, color: "white" }}>
+                {creatingTask ? <span className="inline-flex items-center gap-2"><Loader2 className="animate-spin" size={16} /> Creating…</span> : "Add Task"}
+              </Button>
+            </form>
+            {loadingTasks ? (
+              <div className="flex items-center gap-2 text-gray-600">
+                <Loader2 className="animate-spin" size={18} />
+                Loading…
+              </div>
+            ) : !myTasks || myTasks.length === 0 ? (
+              <p className="text-gray-600">No tasks assigned.</p>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-left border-collapse">
+                  <thead>
+                    <tr className="border-b border-gray-200 text-sm text-gray-600">
+                      <th className="py-2 pr-4">Title</th>
+                      <th className="py-2 pr-4">Project</th>
+                      <th className="py-2 pr-4">Due</th>
+                      <th className="py-2 pr-4">Status</th>
+                      <th className="py-2 pr-4">Action</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {myTasks.map((t) => (
+                      <tr key={t.id} className="border-b border-gray-100 text-sm">
+                        <td className="py-3 pr-4">
+                          <div className="font-medium">{t.title}</div>
+                          {t.description ? (
+                            <div className="text-xs text-gray-500">{t.description}</div>
+                          ) : null}
+                        </td>
+                        <td className="py-3 pr-4">{t.project?.name || "—"}</td>
+                        <td className="py-3 pr-4">{t.dueDate ? formatDate(t.dueDate) : "—"}</td>
+                        <td className="py-3 pr-4">
+                          <span
+                            className="px-2 py-0.5 rounded-full text-xs font-medium"
+                            style={{
+                              border: `1px solid ${accentColor}`,
+                              color: accentColor,
+                              background: "rgba(0,0,0,0.03)",
+                            }}
+                          >
+                            {t.status}
+                          </span>
+                        </td>
+                        <td className="py-3 pr-4">
+                          <div className="flex items-center gap-2">
+                            <select
+                              className="border rounded-md px-2 py-1 text-sm"
+                              defaultValue={t.status}
+                              onChange={(e) => handleUpdateTask(t.id, e.target.value)}
+                              disabled={updatingTask}
+                            >
+                              <option value="PENDING">PENDING</option>
+                              <option value="IN_PROGRESS">IN_PROGRESS</option>
+                              <option value="COMPLETED">COMPLETED</option>
+                              <option value="CANCELLED">CANCELLED</option>
+                            </select>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+        )}
+
+        {activeTab === "projects" && (
+        <Card className="shadow-md border border-gray-200">
+          <CardHeader className="flex flex-row items-center justify-between">
+            <div className="flex items-center gap-2">
+              <CalendarDays size={20} style={{ color: accentColor }} />
+              <CardTitle>My Projects</CardTitle>
+            </div>
+            <Button
+              variant="outline"
+              onClick={() => refetchProjects()}
+              className="rounded-xl"
+              style={{ borderColor: accentColor, color: accentColor }}
+            >
+              Refresh
+            </Button>
+          </CardHeader>
+          <CardContent>
+            {loadingProjects ? (
+              <div className="flex items-center gap-2 text-gray-600">
+                <Loader2 className="animate-spin" size={18} />
+                Loading…
+              </div>
+            ) : !myProjects || myProjects.length === 0 ? (
+              <p className="text-gray-600">No projects yet.</p>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {myProjects.map((p) => (
+                  <div key={p.id} className="rounded-xl border border-gray-200 p-4">
+                    <div className="flex items-center justify-between">
+                      <div className="text-lg font-semibold">{p.name}</div>
+                      <span
+                        className="px-2 py-0.5 rounded-full text-xs font-medium"
+                        style={{
+                          border: `1px solid ${accentColor}`,
+                          color: accentColor,
+                          background: "rgba(0,0,0,0.03)",
+                        }}
+                      >
+                        {p.status}
+                      </span>
+                    </div>
+                    {p.description ? (
+                      <div className="text-sm text-gray-600 mt-1">{p.description}</div>
+                    ) : null}
+                    <div className="mt-3 text-xs text-gray-500">
+                      {p.tasks?.length || 0} task(s)
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+        )}
+
+        {activeTab === "history" && (
         <Card className="shadow-md border border-gray-200">
           <CardHeader className="flex flex-row items-center justify-between">
             <div className="flex items-center gap-2">
@@ -378,6 +617,7 @@ export default function EmployeeDashboard() {
             )}
           </CardContent>
         </Card>
+        )}
       </div>
     </div>
   );

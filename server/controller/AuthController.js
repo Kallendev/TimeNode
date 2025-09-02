@@ -185,4 +185,18 @@ const getMe = async (req, res) => {
   }
 };
 
-export { register, login, logout, getMe};
+// ADMIN: list all users
+const listUsers = async (req, res) => {
+  try {
+    const users = await prisma.user.findMany({
+      select: { id: true, name: true, email: true, role: true, createdAt: true },
+      orderBy: { createdAt: 'desc' },
+    });
+    res.json({ data: users });
+  } catch (error) {
+    console.error('[LIST USERS ERROR]', error);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+};
+
+export { register, login, logout, getMe, listUsers};

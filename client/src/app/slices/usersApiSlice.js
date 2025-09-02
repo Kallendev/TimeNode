@@ -3,6 +3,9 @@ import { apiSlice } from "./apiSlice.js";
 
 const PASSWORD_URL = "/api/password-reset";
 const ATTENDANCE_URL = "/api/attendance";
+const TASKS_URL = "/api/tasks";
+const PROJECTS_URL = "/api/projects";
+
 
 export const usersApiSlice = apiSlice.injectEndpoints({
   endpoints: (builder) => ({
@@ -131,24 +134,115 @@ export const usersApiSlice = apiSlice.injectEndpoints({
       }),
       invalidatesTags: ["Attendance"],
     }),
+    
+    // =========================
+    // ✅ Tasks
+    // =========================
+    getAllTasks: builder.query({
+      query: (params = {}) => {
+        const qs = new URLSearchParams(params).toString();
+        return {
+          url: `${TASKS_URL}${qs ? `?${qs}` : ""}`,
+          method: "GET",
+        };
+      },
+      providesTags: ["Task"],
+    }),
+    getMyTasks: builder.query({
+      query: (userId) => ({
+        url: `${TASKS_URL}/user/${userId}`,
+        method: "GET",
+      }),
+      providesTags: ["Task"],
+    }),
+    updateMyTaskStatus: builder.mutation({
+      query: ({ taskId, status }) => ({
+        url: `${TASKS_URL}/${taskId}/status`,
+        method: "PATCH",
+        body: { status },
+      }),
+      invalidatesTags: ["Task"],
+    }),
+
+    // =========================
+    // 🧩 Projects
+    // =========================
+    getAllProjects: builder.query({
+      query: () => ({
+        url: `${PROJECTS_URL}`,
+        method: "GET",
+      }),
+      providesTags: ["Project"],
+    }),
+    getMyProjects: builder.query({
+      query: (userId) => ({
+        url: `${PROJECTS_URL}/user/${userId}`,
+        method: "GET",
+      }),
+      providesTags: ["Project"],
+    }),
+    createProject: builder.mutation({
+      query: ({ name, description, status }) => ({
+        url: `${PROJECTS_URL}`,
+        method: "POST",
+        body: { name, description, status },
+      }),
+      invalidatesTags: ["Project"],
+    }),
+    updateProjectStatus: builder.mutation({
+      query: ({ projectId, status }) => ({
+        url: `${PROJECTS_URL}/${projectId}/status`,
+        method: "PATCH",
+        body: { status },
+      }),
+      invalidatesTags: ["Project"],
+    }),
+
+    createTask: builder.mutation({
+      query: ({ title, description, dueDate, userId, projectId, source }) => ({
+        url: `${TASKS_URL}`,
+        method: "POST",
+        body: { title, description, dueDate, userId, projectId, source },
+      }),
+      invalidatesTags: ["Task"],
+    }),
     // --- ADMIN ENDPOINTS ---
       getAllRecords: builder.query({
-        query: () => ({
-          url: `${ATTENDANCE_URL}/admin/records`,
+        query: ({ weekOffset = 0 } = {}) => ({
+          url: `${ATTENDANCE_URL}/admin/records?weekOffset=${weekOffset}`,
           method: "GET",
         }),
         providesTags: ["Records"],
       }),
 
       getWeeklyReport: builder.query({
-        query: () => ({
-          url: `${ATTENDANCE_URL}/admin/report/weekly`,
-          method: "GET",
-          responseHandler: (response) => response.text(), // CSV download
+          query: ({ format = "csv", weekOffset = 0 } = {}) => ({
+            url: `${ATTENDANCE_URL}/admin/report/weekly?format=${format}&weekOffset=${weekOffset}`,
+            method: "GET",
+            // Force network fetch
+            cache: "no-store",
+            responseHandler: async (response) => {
+              // Convert response into Blob
+              const blob = await response.blob();
+              return blob;
+            },
+          }),
+          // Don't try to parse JSON, just return Blob directly
+          transformResponse: (response) => response,
         }),
+
+      // Today's insights for admin dashboard
+      getAdminTodayInsights: builder.query({
+        query: (weekOffset = 0) => ({
+          url: `${ATTENDANCE_URL}/admin/insights/today?weekOffset=${weekOffset}`,
+          method: "GET",
+        }),
+        providesTags: ["Attendance"],
       }),
 
-  }),
+
+
+          }),
 });
 
 // =========================
@@ -179,5 +273,18 @@ export const {
   useGetAllRecordsQuery,
   useGetWeeklyReportQuery,
   useLazyGetWeeklyReportQuery,
+  useGetAdminTodayInsightsQuery,
+  // Tasks
+  useGetMyTasksQuery,
+  useUpdateMyTaskStatusMutation,
+  // Projects
+  useGetMyProjectsQuery,
+  useGetAllProjectsQuery,
+  useCreateProjectMutation,
+  useUpdateProjectStatusMutation,
+  // Create Task
+  useCreateTaskMutation,
+  // Admin Tasks
+  useGetAllTasksQuery,
   
 } = usersApiSlice;

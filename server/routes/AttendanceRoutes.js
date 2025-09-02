@@ -7,6 +7,7 @@ import {
   getMyHistory,
   adminList,
   adminWeeklyReport,
+  adminTodayInsights,
 } from '../controller/attendanceController.js';
 
 const router = express.Router();
@@ -20,5 +21,6 @@ router.get('/history', protect, getMyHistory);
 // Admin
 router.get('/admin/records', protect, requireAdmin, adminList);
 router.get('/admin/report/weekly', protect, requireAdmin, adminWeeklyReport);
+router.get('/admin/insights/today', protect, requireAdmin, adminTodayInsights);
 
 export default router;
